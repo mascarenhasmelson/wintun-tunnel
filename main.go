@@ -42,9 +42,10 @@ func main() {
 
 	n := 2048
 	buf := make([]byte, n)
-	//Read and write packets
+	//Read and Write packets
 	for {
 		n = 2048
+		//read packets
 		n, err = dev.Read(buf, 0)
 		if err != nil {
 			panic(err)
@@ -54,6 +55,7 @@ func main() {
 		if err != nil {
 			continue
 		}
+		//comparing ping probe 
 		if header.Protocol == ProtocolICMP {
 			log.Println("Src:", header.Src, " dst:", header.Dst)
 			msg, _ := icmp.ParseMessage(ProtocolICMP, buf[header.Len:])
