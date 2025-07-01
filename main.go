@@ -3,7 +3,8 @@ package main
 import (
 	"log"
 	"net/netip"
-	"tun/winipcfg"
+
+	"github.com/mascarenhasmelson/wintun-tunnel/winipcfg"
 
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
@@ -17,8 +18,8 @@ func main() {
 	id := &windows.GUID{
 		0xdeadbabe,
 		0xcafe,
-		 0xbeef,
-		[8]byte{ 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef },
+		0xbeef,
+		[8]byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef},
 	}
 	ifname := "Test"
 	dev, err := tun.CreateTUNWithRequestedGUID(ifname, id, 0)
@@ -55,7 +56,7 @@ func main() {
 		if err != nil {
 			continue
 		}
-		//comparing ping probe 
+		//comparing ping probe
 		if header.Protocol == ProtocolICMP {
 			log.Println("Src:", header.Src, " dst:", header.Dst)
 			msg, _ := icmp.ParseMessage(ProtocolICMP, buf[header.Len:])
