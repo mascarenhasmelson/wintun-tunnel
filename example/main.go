@@ -22,7 +22,6 @@ import (
 	//"golang.zx2c4.com/wireguard/tun/wintun"
 )
 
-// PortableSockaddr4 represents a 4-byte IP and 2-byte port.
 type PortableSockaddr4 struct {
 	Host uint32
 	Port uint16
@@ -30,11 +29,10 @@ type PortableSockaddr4 struct {
 }
 
 const (
-	// Buffer size for TUN interface.
+	
 	BufferSize = 10000
-	// Keepalive interval and timeout.
-	KeepaliveInterval = 3 * time.Second  // Reduced for faster recovery
-	Timeout           = 60 * time.Second // Tolerates ICMP traffic
+	KeepaliveInterval = 3 * time.Second 
+	Timeout           = 60 * time.Second 
 )
 
 // Azure temp public IP
@@ -63,7 +61,6 @@ var (
 // 	}
 // }
 
-// addRoute adds a route using the Windows route command.
 func addRoute(dst, gw, ifname string) error {
 	_, dstNet, err := net.ParseCIDR(dst)
 	if err != nil {
@@ -92,7 +89,6 @@ func addRoute(dst, gw, ifname string) error {
 	return nil
 }
 
-// CreateInterface sets up a TUN interface with the specified IP address.
 func CreateInterface() (tun.Device, error) {
 	id := &windows.GUID{
 		0x0000000,
@@ -143,7 +139,6 @@ func CreateInterface() (tun.Device, error) {
 	err = addRoute("100.64.1.1/32", "0.0.0.0", ifname)
 	if err != nil {
 		fmt.Printf("Warning: failed to add route: %v (continuing without route)\n", err)
-		// Continue without route for testing
 	} else {
 		fmt.Println("Route added successfully")
 	}
@@ -156,7 +151,7 @@ func CreateInterface() (tun.Device, error) {
 	return dev, nil
 }
 
-// addrEqual compares two UDP addresses for equality.
+
 func addrEqual(a, b *net.UDPAddr) bool {
 	if a == nil || b == nil {
 		return false
@@ -205,7 +200,7 @@ func main() {
 	}
 	fmt.Printf("Resolved server IP: %s\n", serverIP)
 
-	// Create TUN interface with retries (unchanged).
+
 	var dev tun.Device
 	for attempt := 1; attempt <= 3; attempt++ {
 		fmt.Printf("Attempt %d/3: Creating TUN interface\n", attempt)
@@ -228,17 +223,17 @@ func main() {
 	defer dev.Close()
 	fmt.Println("TUN interface ready")
 
-	// Log interface details (unchanged).
+	
 	cmd = exec.Command("netsh", "interface", "ipv4", "show", "interfaces")
 	output, _ = cmd.CombinedOutput()
 	fmt.Printf("Network interfaces:\n%s\n", output)
 
-	// Server address for handshake.
+	
 	sinServer := &net.UDPAddr{IP: serverIP, Port: *serverPort}
 
-	// Main loop for handshake and tunneling.
+	
 	for {
-		// Create UDP socket with larger receive buffer.
+		
 		fmt.Println("Creating UDP socket for handshake")
 		conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 		if err != nil {
@@ -246,13 +241,13 @@ func main() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		// Set larger receive buffer.
+		
 		err = conn.SetReadBuffer(1024 * 1024) // 1MB
 		if err != nil {
 			fmt.Printf("Warning: failed to set socket receive buffer: %v\n", err)
 		}
 
-		// Handshake to resolve remote address (unchanged).
+		
 		var sinRemote *net.UDPAddr
 		fmt.Printf("Pinging handshake server %s:%d\n", serverIP, *serverPort)
 		buf := make([]byte, BufferSize)
@@ -266,7 +261,6 @@ func main() {
 				continue
 			}
 
-			// Check for response with short deadline.
 			for {
 				conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 				n, addr, err := conn.ReadFromUDP(buf)
@@ -295,7 +289,7 @@ func main() {
 				}
 			}
 
-			// Ensure 1-second interval between pings.
+			
 			if sinRemote == nil {
 				elapsed := time.Since(start)
 				if elapsed < 1*time.Second {
@@ -304,7 +298,6 @@ func main() {
 			}
 		}
 
-		// testing peer connectivity
 		fmt.Printf("Testing connectivity to peer %s:%d\n", sinRemote.IP, sinRemote.Port)
 		n, err := conn.WriteToUDP([]byte("TEST"), sinRemote)
 		if err != nil {
@@ -313,7 +306,6 @@ func main() {
 			fmt.Printf("Successfully sent %d bytes test packet to peer %s:%d\n", n, sinRemote.IP, sinRemote.Port)
 		}
 
-		// start tunneling
 		fmt.Printf("Starting tunnel to peer %s:%d\n", sinRemote.IP, sinRemote.Port)
 		err = startTunnel(context.Background(), dev, conn, sinRemote)
 		if err != nil {
@@ -327,27 +319,27 @@ func main() {
 	}
 }
 
-// startTunnel manages the tunneling process using goroutines.
+
 func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAddr *net.UDPAddr) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// channels for data passing.
-	tunToUDP := make(chan []byte, 100)     // TUN -> UDP
-	udpToTUN := make(chan DataPacket, 100) // UDP -> TUN
-	keepalive := make(chan struct{}, 1)    // Signal keepalive sent
-	errors := make(chan error, 10)         // Collect errors from goroutines
+	
+	tunToUDP := make(chan []byte, 100)     
+	udpToTUN := make(chan DataPacket, 100) 
+	keepalive := make(chan struct{}, 1)   
+	errors := make(chan error, 10)        
 
-	// wait group to ensure all goroutines complete.
+	
 	var wg sync.WaitGroup
 
-	// last received and sent times for timeout tracking.
+	
 	var lastRcvd, lastSent, lastTest time.Time
 	lastRcvd = time.Now()
 	lastSent = time.Now()
 	lastTest = time.Now()
 
-	// read from TUN device.
+	
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -391,7 +383,7 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 		}
 	}()
 
-	// reading from UDP socket.
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -427,7 +419,7 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 		}
 	}()
 
-	// writing to UDP socket.
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -458,7 +450,7 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 		}
 	}()
 
-	// write to TUN device and process UDP packets.
+	
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -511,7 +503,6 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 		}
 	}()
 
-	// heartbeat code
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -521,7 +512,7 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 			select {
 			case <-ticker.C:
 				now := time.Now()
-				// sending heartbeat
+				
 				if now.Sub(lastSent) > KeepaliveInterval {
 					fmt.Printf("Sending keepalive packet to peer %s:%d\n", peerAddr.IP, peerAddr.Port)
 					n, err := conn.WriteToUDP([]byte{0x00}, peerAddr)
@@ -543,7 +534,6 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 						fmt.Printf("Sent %d bytes for keepalive, expected 1\n", n)
 					}
 				}
-				// sending periodic test heartbeat.
 				if now.Sub(lastTest) > 10*time.Second {
 					fmt.Printf("Sending test packet to peer %s:%d\n", peerAddr.IP, peerAddr.Port)
 					n, err := conn.WriteToUDP([]byte("TEST"), peerAddr)
@@ -554,7 +544,6 @@ func startTunnel(ctx context.Context, dev tun.Device, conn *net.UDPConn, peerAdd
 					}
 					lastTest = now
 				}
-				// timeout more than designated time.
 				if now.Sub(lastRcvd) > Timeout {
 					select {
 					case errors <- fmt.Errorf("timeout: no packets received for %v", Timeout):
