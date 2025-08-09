@@ -100,7 +100,7 @@ func CreateInterface() (tun.Device, error) {
 		0xFFFF,
 		[8]byte{0xFF, 0xe9, 0x76, 0xe5, 0x8c, 0x74, 0x06, 0x3e},
 	}
-	ifname := "MyNIC"
+	ifname := "Test"
 	fmt.Printf("Creating Wintun interface: %s\n", ifname)
 	dev, err := tun.CreateTUNWithRequestedGUID(ifname, id, 0)
 	if err != nil {
