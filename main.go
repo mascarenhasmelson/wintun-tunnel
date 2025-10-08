@@ -3,9 +3,7 @@ package main
 import (
 	"log"
 	"net/netip"
-
 	"github.com/mascarenhasmelson/wintun-tunnel/winipcfg"
-
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/sys/windows"
